@@ -1,3 +1,16 @@
+local eventbypass
+
+eventbypass = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    -- Ganti "Anti_Cheat_Remote" dengan nama remote anti-cheat yang kamu temukan
+    if not checkcaller() and self.Name == "Anti_Cheat_Remote" and method == "FireServer" then
+        print("Anti Cheat remote was called and blocked.")
+        return wait(9e9) -- Tidak melakukan apa-apa jika remote ini dipanggil
+    end
+    return eventbypass(self, ...)
+end)
+
 local VenyxLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/Documantation12/Universal-Vehicle-Script/main/Library.lua"))()
 local Venyx = VenyxLibrary.new("Universal Vehicle Script", 5013109572)
 

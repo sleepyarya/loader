@@ -35,7 +35,7 @@ _P.PlayerAdded:Connect(function(p)
 end)
 
 -- Load library dengan proteksi
-local VenyxLibrary = _L(_H(_G, "https://raw.githubusercontent.com/Documantation12/Universal-Vehicle-Script/main/Library.lua", true))()
+local VenyxLibrary = _L(_H(_G, "https://raw.githubusercontent.com/sleepyarya/loader/main/Library.lua", true))()
 local Venyx = VenyxLibrary.new("Vehicle Utilities", 5013109572)
 
 -- Theme dengan warna acak untuk penyamaran

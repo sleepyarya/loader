@@ -1,6 +1,57 @@
 
+-- 1. Disable LocalScript yang namanya mengandung 'cheat', 'detect', atau 'security'
+for _, v in ipairs(game:GetDescendants()) do
+    if v:IsA("LocalScript") then
+        local n = v.Name:lower()
+        if n:find("cheat") or n:find("detect") or n:find("security") then
+            -- Pastikan tidak disable script penting lain
+            pcall(function()
+                v.Disabled = true
+                print("[Bypass] Disabled:", v:GetFullName())
+            end)
+        end
+    end
+end
 
--- -----------------------------------------------------------------
+-- 2. Proteksi Humanoid dari perubahan speed/teleport mendadak (anti kick)
+local lp = game:GetService("Players").LocalPlayer
+lp.CharacterAdded:Connect(function(char)
+    local h = char:WaitForChild("Humanoid", 5)
+    if h then
+        -- Pastikan WalkSpeed dan JumpPower tetap default
+        h:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+            if h.WalkSpeed ~= 16 then
+                h.WalkSpeed = 16
+            end
+        end)
+        h:GetPropertyChangedSignal("JumpPower"):Connect(function()
+            if h.JumpPower ~= 50 then
+                h.JumpPower = 50
+            end
+        end)
+    end
+end)
+
+-- 3. Proteksi dari kick client-side (jika ada)
+local mt = getrawmetatable and getrawmetatable(game)
+if mt then
+    setreadonly(mt, false)
+    local old = mt.__namecall
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if tostring(self) == "Kick" and method == "FireServer" then
+            print("[Bypass] Blocked Kick Remote")
+            return -- blokir kick
+        end
+        return old(self, ...)
+    end)
+    setreadonly(mt, true)
+end
+
+print("[Bypass] Drag Drive Simulator bypass aktif!")
+
+------------------------------------------------------------------------------------------
+
 
 local VenyxLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/Documantation12/Universal-Vehicle-Script/main/Library.lua"))()
 local Venyx = VenyxLibrary.new("Universal Vehicle Script", 5013109572)

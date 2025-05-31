@@ -1,29 +1,21 @@
--- Cari dan disable LocalScript anti-cheat secara selektif dengan delay kecil
+-- Disable LocalScript anti-cheat secara selektif dan bertahap dengan delay
 local disabledCount = 0
-for _, v in pairs(game:GetDescendants()) do
+local descendants = game:GetDescendants()
+for i = 1, #descendants do
+    local v = descendants[i]
     if v:IsA("LocalScript") then
         local nameLower = v.Name:lower()
         if nameLower:find("anticheat") or nameLower:find("security") or nameLower:find("detect") then
-            -- Cek apakah script sudah disable, jika belum disable
             if not v.Disabled then
                 v.Disabled = true
                 disabledCount = disabledCount + 1
                 print("Disabled LocalScript AntiCheat:", v:GetFullName())
-                wait(0.1) -- beri jeda kecil agar tidak freeze
+                wait(0.1) -- jeda kecil agar tidak freeze
             end
         end
     end
 end
-
 print("Total LocalScript anti-cheat disabled:", disabledCount)
-
--- Contoh override variabel kecepatan agar tetap normal (jika diperlukan)
-local player = game.Players.LocalPlayer
-if player then
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    humanoid.WalkSpeed = 16 -- default Roblox
-end
 
 -- -----------------------------------------------------------------
 

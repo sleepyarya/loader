@@ -1,21 +1,4 @@
--- Disable LocalScript anti-cheat secara selektif dan bertahap dengan delay
-local disabledCount = 0
-local descendants = game:GetDescendants()
-for i = 1, #descendants do
-    local v = descendants[i]
-    if v:IsA("LocalScript") then
-        local nameLower = v.Name:lower()
-        if nameLower:find("anticheat") or nameLower:find("security") or nameLower:find("detect") then
-            if not v.Disabled then
-                v.Disabled = true
-                disabledCount = disabledCount + 1
-                print("Disabled LocalScript AntiCheat:", v:GetFullName())
-                wait(0.1) -- jeda kecil agar tidak freeze
-            end
-        end
-    end
-end
-print("Total LocalScript anti-cheat disabled:", disabledCount)
+
 
 -- -----------------------------------------------------------------
 

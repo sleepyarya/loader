@@ -1,320 +1,223 @@
---[[
-  Universal Vehicle Script dengan proteksi anti-deteksi
-  Versi aman dengan teknik obfuskasi dan bypass
-]]
+local VenyxLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/Documantation12/Universal-Vehicle-Script/main/Library.lua"))()
+local Venyx = VenyxLibrary.new("Universal Vehicle Script", 5013109572)
 
--- Obfuskasi dasar variabel
-local _L = loadstring
-local _H = game.HttpGet
-local _G = game
-local _P = _G:GetService("Players")
-local _R = _G:GetService("RunService")
-local _U = _G:GetService("UserInputService")
-local _LP = _P.LocalPlayer
-local _WS = _G:GetService("Workspace")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
 
--- Mode stealth dan proteksi
-local _StealthMode = (syn and true) or (getreg and true) or false
-local _ModeratorPresent = false
-
--- Deteksi moderator
-local function _CheckModerators()
-    for _, player in ipairs(_P:GetPlayers()) do
-        if player:GetRankInGroup(1) > 100 then -- Ganti dengan group ID yang sesuai
-            _ModeratorPresent = true
-            return
-        end
-    end
-end
-
-_CheckModerators()
-_P.PlayerAdded:Connect(function(p)
-    if p:GetRankInGroup(1) > 100 then
-        _ModeratorPresent = true
-    end
-end)
-
--- Load library dengan proteksi
-local VenyxLibrary = _L(_H(_G, "https://raw.githubusercontent.com/sleepyarya/loader/main/Library.lua", true))()
-local Venyx = VenyxLibrary.new("Vehicle Utilities", 5013109572)
-
--- Theme dengan warna acak untuk penyamaran
 local Theme = {
-    Background = Color3.fromRGB(61, 60, 124),
-    Glow = Color3.fromRGB(60, 63, 221),
-    Accent = Color3.fromRGB(55, 52, 90),
-    LightContrast = Color3.fromRGB(64, 65, 128),
-    DarkContrast = Color3.fromRGB(32, 33, 64),
-    TextColor = Color3.fromRGB(255, 255, 255)
+	Background = Color3.fromRGB(61, 60, 124), 
+	Glow = Color3.fromRGB(60, 63, 221), 
+	Accent = Color3.fromRGB(55, 52, 90), 
+	LightContrast = Color3.fromRGB(64, 65, 128), 
+	DarkContrast = Color3.fromRGB(32, 33, 64),  
+	TextColor = Color3.fromRGB(255, 255, 255)
 }
 
 for index, value in pairs(Theme) do
-    pcall(Venyx.setTheme, Venyx, index, value)
+	pcall(Venyx.setTheme, Venyx, index, value)
 end
 
--- Fungsi utama dengan proteksi
-local function _SafeGetVehicle(descendant)
-    if not descendant or not _LP.Character then return nil end
-    
-    return descendant:FindFirstAncestor(_LP.Name .. "'s Car") or
-           (descendant:FindFirstAncestor("Body") and descendant:FindFirstAncestor("Body").Parent or
-           (descendant:FindFirstAncestor("Misc") and descendant:FindFirstAncestor("Misc").Parent) or
-           descendant:FindFirstAncestorWhichIsA("Model")
+local function GetVehicleFromDescendant(Descendant)
+	return
+		Descendant:FindFirstAncestor(LocalPlayer.Name .. "\'s Car") or
+		(Descendant:FindFirstAncestor("Body") and Descendant:FindFirstAncestor("Body").Parent) or
+		(Descendant:FindFirstAncestor("Misc") and Descendant:FindFirstAncestor("Misc").Parent) or
+		Descendant:FindFirstAncestorWhichIsA("Model")
 end
 
-local function _SafeTeleport(cframe)
-    if _ModeratorPresent or not _StealthMode then return end
-    
-    local success, result = pcall(function()
-        local char = _LP.Character
-        if not char then return end
-        
-        local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-        if not humanoid then return end
-        
-        local seat = humanoid.SeatPart
-        if not seat then return end
-        
-        local vehicle = _SafeGetVehicle(seat)
-        if not vehicle then return end
-        
-        char.Parent = vehicle
-        
-        local primary = vehicle:FindFirstChild("PrimaryPart") or vehicle:FindFirstChildWhichIsA("BasePart")
-        if primary then
-            vehicle:SetPrimaryPartCFrame(cframe)
-        else
-            vehicle:PivotTo(cframe)
-        end
-    end)
-    
-    if not success then
-        warn("Teleport failed:", result)
-    end
+local function TeleportVehicle(CoordinateFrame: CFrame)
+	local Parent = LocalPlayer.Character.Parent
+	local Vehicle = GetVehicleFromDescendant(LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid").SeatPart)
+	LocalPlayer.Character.Parent = Vehicle
+	local success, response = pcall(function()
+		return Vehicle:SetPrimaryPartCFrame(CoordinateFrame)
+	end)
+	if not success then
+		return Vehicle:MoveTo(CoordinateFrame.Position)
+	end
 end
 
--- Implementasi fitur dengan proteksi
-local vehiclePage = Venyx:addPage("Vehicle Controls", 8356815386)
-local usageSection = vehiclePage:addSection("Main Controls")
 
-local _KeybindsActive = true
-usageSection:addToggle("Enable Keybinds", _KeybindsActive, function(v)
-    if _ModeratorPresent then 
-        _KeybindsActive = false
-        return 
-    end
-    _KeybindsActive = v
+local vehiclePage = Venyx:addPage("Vehicle", 8356815386)
+local usageSection = vehiclePage:addSection("Usage")
+local velocityEnabled = true;
+usageSection:addToggle("Keybinds Active", velocityEnabled, function(v) velocityEnabled = v end)
+local flightSection = vehiclePage:addSection("Flight")
+local flightEnabled = false
+local flightSpeed = 1
+flightSection:addToggle("Enabled", false, function(v) flightEnabled = v end)
+flightSection:addSlider("Speed", 100, 0, 800, function(v) flightSpeed = v / 100 end)
+local defaultCharacterParent 
+RunService.Stepped:Connect(function()
+	local Character = LocalPlayer.Character
+	if flightEnabled == true then
+		if Character and typeof(Character) == "Instance" then
+			local Humanoid = Character:FindFirstChildWhichIsA("Humanoid")
+			if Humanoid and typeof(Humanoid) == "Instance" then
+				local SeatPart = Humanoid.SeatPart
+				if SeatPart and typeof(SeatPart) == "Instance" and SeatPart:IsA("VehicleSeat") then
+					local Vehicle = GetVehicleFromDescendant(SeatPart)
+					if Vehicle and Vehicle:IsA("Model") then
+						Character.Parent = Vehicle
+						if not Vehicle.PrimaryPart then
+							if SeatPart.Parent == Vehicle then
+								Vehicle.PrimaryPart = SeatPart
+							else
+								Vehicle.PrimaryPart = Vehicle:FindFirstChildWhichIsA("BasePart")
+							end
+						end
+						local PrimaryPartCFrame = Vehicle:GetPrimaryPartCFrame()
+						Vehicle:SetPrimaryPartCFrame(CFrame.new(PrimaryPartCFrame.Position, PrimaryPartCFrame.Position + workspace.CurrentCamera.CFrame.LookVector) * (UserInputService:GetFocusedTextBox() and CFrame.new(0, 0, 0) or CFrame.new((UserInputService:IsKeyDown(Enum.KeyCode.D) and flightSpeed) or (UserInputService:IsKeyDown(Enum.KeyCode.A) and -flightSpeed) or 0, (UserInputService:IsKeyDown(Enum.KeyCode.E) and flightSpeed / 2) or (UserInputService:IsKeyDown(Enum.KeyCode.Q) and -flightSpeed / 2) or 0, (UserInputService:IsKeyDown(Enum.KeyCode.S) and flightSpeed) or (UserInputService:IsKeyDown(Enum.KeyCode.W) and -flightSpeed) or 0)))
+						SeatPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+						SeatPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+					end
+				end
+			end
+		end
+	else
+		if Character and typeof(Character) == "Instance" then
+			Character.Parent = defaultCharacterParent or Character.Parent
+			defaultCharacterParent = Character.Parent
+		end
+	end
 end)
-
--- Flight system dengan proteksi
-local flightSection = vehiclePage:addSection("Flight System")
-local _FlightEnabled = false
-local _FlightSpeed = 1
-
-flightSection:addToggle("Flight Mode", false, function(v)
-    if _ModeratorPresent then 
-        _FlightEnabled = false
-        return 
-    end
-    _FlightEnabled = v and _StealthMode
+local speedSection = vehiclePage:addSection("Acceleration")
+local velocityMult = 0.025;
+speedSection:addSlider("Multiplier (Thousandths)", 25, 0, 50, function(v) velocityMult = v / 1000; end)
+local velocityEnabledKeyCode = Enum.KeyCode.W;
+speedSection:addKeybind("Velocity Enabled", velocityEnabledKeyCode, function()
+	if not velocityEnabled then
+		return
+	end
+	while UserInputService:IsKeyDown(velocityEnabledKeyCode) do
+		task.wait(0)
+		local Character = LocalPlayer.Character
+		if Character and typeof(Character) == "Instance" then
+			local Humanoid = Character:FindFirstChildWhichIsA("Humanoid")
+			if Humanoid and typeof(Humanoid) == "Instance" then
+				local SeatPart = Humanoid.SeatPart
+				if SeatPart and typeof(SeatPart) == "Instance" and SeatPart:IsA("VehicleSeat") then
+					SeatPart.AssemblyLinearVelocity *= Vector3.new(1 + velocityMult, 1, 1 + velocityMult)
+				end
+			end
+		end
+		if not velocityEnabled then
+			break
+		end
+	end
+end, function(v) velocityEnabledKeyCode = v.KeyCode end)
+local decelerateSelection = vehiclePage:addSection("Deceleration")
+local qbEnabledKeyCode = Enum.KeyCode.S
+local velocityMult2 = 150e-3
+decelerateSelection:addSlider("Brake Force (Thousandths)", velocityMult2*1e3, 0, 300, function(v) velocityMult2 = v / 1000; end)
+decelerateSelection:addKeybind("Quick Brake Enabled", qbEnabledKeyCode, function()
+	if not velocityEnabled then
+		return
+	end
+	while UserInputService:IsKeyDown(qbEnabledKeyCode) do
+		task.wait(0)
+		local Character = LocalPlayer.Character
+		if Character and typeof(Character) == "Instance" then
+			local Humanoid = Character:FindFirstChildWhichIsA("Humanoid")
+			if Humanoid and typeof(Humanoid) == "Instance" then
+				local SeatPart = Humanoid.SeatPart
+				if SeatPart and typeof(SeatPart) == "Instance" and SeatPart:IsA("VehicleSeat") then
+					SeatPart.AssemblyLinearVelocity *= Vector3.new(1 - velocityMult2, 1, 1 - velocityMult2)
+				end
+			end
+		end
+		if not velocityEnabled then
+			break
+		end
+	end
+end, function(v) qbEnabledKeyCode = v.KeyCode end)
+decelerateSelection:addKeybind("Stop the Vehicle", Enum.KeyCode.P, function(v)
+	if not velocityEnabled then
+		return
+	end
+	local Character = LocalPlayer.Character
+	if Character and typeof(Character) == "Instance" then
+		local Humanoid = Character:FindFirstChildWhichIsA("Humanoid")
+		if Humanoid and typeof(Humanoid) == "Instance" then
+			local SeatPart = Humanoid.SeatPart
+			if SeatPart and typeof(SeatPart) == "Instance" and SeatPart:IsA("VehicleSeat") then
+				SeatPart.AssemblyLinearVelocity *= Vector3.new(0, 0, 0)
+				SeatPart.AssemblyAngularVelocity *= Vector3.new(0, 0, 0)
+			end
+		end
+	end
 end)
-
-flightSection:addSlider("Flight Speed", 100, 0, 800, function(v)
-    _FlightSpeed = v / 100
+local springSection = vehiclePage:addSection("Springs")
+springSection:addToggle("Visible", false, function(v)
+	local Character = LocalPlayer.Character
+	if Character and typeof(Character) == "Instance" then
+		local Humanoid = Character:FindFirstChildWhichIsA("Humanoid")
+		if Humanoid and typeof(Humanoid) == "Instance" then
+			local SeatPart = Humanoid.SeatPart
+			if SeatPart and typeof(SeatPart) == "Instance" and SeatPart:IsA("VehicleSeat") then
+				local Vehicle = GetVehicleFromDescendant(SeatPart)
+				for _, SpringConstraint in pairs(Vehicle:GetDescendants()) do
+					if SpringConstraint:IsA("SpringConstraint") then
+						SpringConstraint.Visible = v
+					end
+				end
+			end
+		end
+	end
 end)
-
--- Velocity controls dengan proteksi
-local speedSection = vehiclePage:addSection("Speed Controls")
-local _VelocityMult = 0.025
-speedSection:addSlider("Speed Multiplier", 25, 0, 50, function(v)
-    _VelocityMult = v / 1000
-end)
-
-local _DefaultCharParent
-local _LastCheck = 0
-
-_R.Stepped:Connect(function()
-    if _ModeratorPresent or not _StealthMode then return end
-    
-    -- Batasi pemeriksaan untuk mengurangi beban CPU
-    if time() - _LastCheck > 5 then
-        _CheckModerators()
-        _LastCheck = time()
-    end
-    
-    local char = _LP.Character
-    if not char then return end
-    
-    local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-    if not humanoid then return end
-    
-    local seat = humanoid.SeatPart
-    if not seat or not seat:IsA("VehicleSeat") then
-        if _DefaultCharParent then
-            char.Parent = _DefaultCharParent
-        end
-        return
-    end
-    
-    -- Simpan parent default
-    if not _DefaultCharParent then
-        _DefaultCharParent = char.Parent
-    end
-    
-    -- Flight system
-    if _FlightEnabled then
-        char.Parent = _SafeGetVehicle(seat) or char.Parent
-        
-        local vehicle = _SafeGetVehicle(seat)
-        if vehicle then
-            if not vehicle.PrimaryPart then
-                vehicle.PrimaryPart = seat.Parent == vehicle and seat or vehicle:FindFirstChildWhichIsA("BasePart")
-            end
-            
-            if vehicle.PrimaryPart then
-                local cam = workspace.CurrentCamera
-                if cam then
-                    local look = cam.CFrame.LookVector
-                    local pos = vehicle.PrimaryPart.Position
-                    
-                    local moveX = (_U:IsKeyDown(Enum.KeyCode.D) and _FlightSpeed) or (_U:IsKeyDown(Enum.KeyCode.A) and -_FlightSpeed) or 0
-                    local moveY = (_U:IsKeyDown(Enum.KeyCode.E) and _FlightSpeed/2) or (_U:IsKeyDown(Enum.KeyCode.Q) and -_FlightSpeed/2) or 0
-                    local moveZ = (_U:IsKeyDown(Enum.KeyCode.S) and _FlightSpeed or (_U:IsKeyDown(Enum.KeyCode.W) and -_FlightSpeed) or 0
-                    
-                    vehicle:SetPrimaryPartCFrame(CFrame.new(pos, pos + look) * CFrame.new(moveX, moveY, moveZ))
-                end
-            end
-            
-            seat.AssemblyLinearVelocity = Vector3.zero
-            seat.AssemblyAngularVelocity = Vector3.zero
-        end
-    else
-        char.Parent = _DefaultCharParent or char.Parent
-    end
-end)
-
--- Keybind system dengan proteksi
-local _VelocityKey = Enum.KeyCode.W
-local _BrakeKey = Enum.KeyCode.S
-local _StopKey = Enum.KeyCode.P
-
-speedSection:addKeybind("Accelerate", _VelocityKey, function()
-    if not _KeybindsActive or _ModeratorPresent then return end
-    
-    while _U:IsKeyDown(_VelocityKey) and _KeybindsActive and _StealthMode do
-        task.wait()
-        local seat = _LP.Character and _LP.Character:FindFirstChildWhichIsA("Humanoid") and _LP.Character:FindFirstChildWhichIsA("Humanoid").SeatPart
-        if seat and seat:IsA("VehicleSeat") then
-            seat.AssemblyLinearVelocity = seat.AssemblyLinearVelocity * Vector3.new(1 + _VelocityMult, 1, 1 + _VelocityMult)
-        end
-    end
-end, function(v) _VelocityKey = v.KeyCode end)
-
--- Brake system
-local _BrakeMult = 0.15
-local brakeSection = vehiclePage:addSection("Brake Controls")
-brakeSection:addSlider("Brake Force", _BrakeMult*1000, 0, 300, function(v)
-    _BrakeMult = v / 1000
-end)
-
-brakeSection:addKeybind("Brake", _BrakeKey, function()
-    if not _KeybindsActive or _ModeratorPresent then return end
-    
-    while _U:IsKeyDown(_BrakeKey) and _KeybindsActive and _StealthMode do
-        task.wait()
-        local seat = _LP.Character and _LP.Character:FindFirstChildWhichIsA("Humanoid") and _LP.Character:FindFirstChildWhichIsA("Humanoid").SeatPart
-        if seat and seat:IsA("VehicleSeat") then
-            seat.AssemblyLinearVelocity = seat.AssemblyLinearVelocity * Vector3.new(1 - _BrakeMult, 1, 1 - _BrakeMult)
-        end
-    end
-end, function(v) _BrakeKey = v.KeyCode end)
-
-brakeSection:addKeybind("Instant Stop", _StopKey, function()
-    if not _KeybindsActive or _ModeratorPresent then return end
-    
-    local seat = _LP.Character and _LP.Character:FindFirstChildWhichIsA("Humanoid") and _LP.Character:FindFirstChildWhichIsA("Humanoid").SeatPart
-    if seat and seat:IsA("VehicleSeat") then
-        seat.AssemblyLinearVelocity = Vector3.zero
-        seat.AssemblyAngularVelocity = Vector3.zero
-    end
-end)
-
--- Spring visibility toggle
-local springSection = vehiclePage:addSection("Visuals")
-springSection:addToggle("Show Springs", false, function(v)
-    if _ModeratorPresent then return end
-    
-    local seat = _LP.Character and _LP.Character:FindFirstChildWhichIsA("Humanoid") and _LP.Character:FindFirstChildWhichIsA("Humanoid").SeatPart
-    if seat then
-        local vehicle = _SafeGetVehicle(seat)
-        if vehicle then
-            for _, spring in ipairs(vehicle:GetDescendants()) do
-                if spring:IsA("SpringConstraint") then
-                    spring.Visible = v
-                end
-            end
-        end
-    end
-end)
-
--- Game-specific features dengan proteksi
-local function _AddGameSpecificFeatures()
-    local placeId = _G.PlaceId
-    
-    -- Wayfort (Driving Empire)
-    if placeId == 3351674303 then
-        local wayfortPage = Venyx:addPage("Wayfort", 8357222903)
-        local dealershipSection = wayfortPage:addSection("Dealership Teleport")
-        
-        local dealerships = {}
-        local success, result = pcall(function()
-            return _WS:WaitForChild("Game"):WaitForChild("Dealerships"):WaitForChild("Dealerships"):GetChildren()
-        end)
-        
-        if success then
-            for _, dealer in ipairs(result) do
-                table.insert(dealerships, dealer.Name)
-            end
-        end
-        
-        dealershipSection:addDropdown("Select Dealership", dealerships, function(v)
-            if _ModeratorPresent then return end
-            pcall(function()
-                _G:GetService("ReplicatedStorage").Remotes.Location:FireServer("Enter", v)
-            end)
-        end)
-    end
+repeat
+	task.wait(0)
+until game:IsLoaded() and game.PlaceId > 0
+if game.PlaceId == 3351674303 then
+	local drivingEmpirePage = Venyx:addPage("Wayfort", 8357222903)
+	local dealershipSection = drivingEmpirePage:addSection("Vehicle Dealership")
+	local dealershipList = {}
+	for index, value in pairs(workspace:WaitForChild("Game"):WaitForChild("Dealerships"):WaitForChild("Dealerships"):GetChildren()) do
+		table.insert(dealershipList, value.Name)
+	end
+	dealershipSection:addDropdown("Dealership", dealershipList, function(v)
+		game:GetService("ReplicatedStorage").Remotes.Location:FireServer("Enter", v)
+	end)
+elseif game.PlaceId == 891852901 then
+	local greenvillePage = Venyx:addPage("Greenville", 8360925727)
+elseif game.PlaceId == 54865335 then
+	local ultimateDrivingPage = Venyx:addPage("Westover", 8360954483)
+elseif game.PlaceId == 5232896677 then
+	local pacificoPage = Venyx:addPage("Pacifico", 3028235557)
 end
-
--- Delay game-specific features untuk menghindari deteksi
-task.spawn(function()
-    wait(5) -- Tunggu game sepenuhnya load
-    if not _ModeratorPresent then
-        _AddGameSpecificFeatures()
-    end
+local infoPage = Venyx:addPage("Information", 8356778308)
+local discordSection = infoPage:addSection("Discord")
+discordSection:addButton(syn and "Join the Discord server" or "Copy Discord Link", function()
+	if syn then
+		syn.request({
+			Url = "http://127.0.0.1:6463/rpc?v=1",
+			Method = "POST",
+			Headers = {
+				["Content-Type"] = "application/json",
+				["Origin"] = "https://discord.com"
+			},
+			Body = game:GetService("HttpService"):JSONEncode({
+				cmd = "INVITE_BROWSER",
+				args = {
+					code = "ENHYznSPmM"
+				},
+				nonce = game:GetService("HttpService"):GenerateGUID(false)
+			}),
+		})
+		return
+	end
+	setclipboard("https://www.discord.com/invite/ENHYznSPmM")
 end)
 
--- GUI toggle dengan proteksi
-local function _ToggleGUI()
-    if _ModeratorPresent then return end
+
+local function CloseGUI()
     Venyx:toggle()
 end
 
-_U.InputBegan:Connect(function(input, processed)
-    if processed or _ModeratorPresent then return end
-    if input.KeyCode == Enum.KeyCode.RightBracket then
-        _ToggleGUI()
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if not gameProcessedEvent and input.KeyCode == Enum.KeyCode.RightBracket then
+        CloseGUI()
     end
 end)
-
--- Anti-kick protection (hanya di environment yang mendukung)
-if _StealthMode then
-    local originalKick = _LP.Kick
-    _LP.Kick = function(self, ...)
-        warn("[Protection] Kick attempt blocked")
-        return
-    end
-end
-
--- Final setup message
-print("[Vehicle Utilities] Loaded successfully in stealth mode:", _StealthMode)
